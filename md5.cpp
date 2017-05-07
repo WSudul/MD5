@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "md5.h"
 
-//zdefiniowanie przesuniec bitowych
+//defining bit shifts
 #define S11 7
 #define S12 12
 #define S13 17
@@ -19,7 +19,7 @@
 #define S43 15
 #define S44 21
 
-//funkcja zwracajaca kod md5
+//returns md5 digest as string
 std::string md5_hash(const std::string str);
 
 
@@ -39,7 +39,7 @@ inline uint32_t MD5::I(uint32_t X, uint32_t Y, uint32_t Z) {
 	return Y ^ (X | (~Z));
 }
 
-// obrot cykliczny 32-bitowego slowa w lewo
+// cyclic rotation of 32bit word
 inline uint32_t MD5::rotate_left(uint32_t x, int n) {
 	return (x << n) | (x >> (32 - n));
 }
@@ -62,7 +62,7 @@ inline void MD5::II(uint32_t &a, uint32_t b, uint32_t c, uint32_t d, uint32_t x,
 }
 
 
-// konstruktor przetrwarzajacy string na hash
+// ctor
 MD5::MD5(const std::string &text)
 {
 	init();
@@ -72,16 +72,16 @@ MD5::MD5(const std::string &text)
 	finalize();
 }
 
-//inicjalizacja parametrow
+//initalizing parameters
 void MD5::init()
 {
 	finalized = false;
 
-	//zerowanie licznika 64-bitowego
+	//clearing 64bit counters
 	counter[0] = 0;
 	counter[1] = 0;
 
-	//zapisanie wartosci stalych potrzebnych do inicjalizacji algorytmu
+	//assign starting values
 	status_arr[0] = 0x67452301;
 	status_arr[1] = 0xefcdab89;
 	status_arr[2] = 0x98badcfe;
@@ -89,11 +89,10 @@ void MD5::init()
 }
 
 
-// dekodowanie bloku danych wejsciowych input z 8bit na 32 bit. Na jednym elemecie output zapisane zostana 4 elementy input
+// decoding input from 8bit (assuming eg 8bit chars) to 32 bit array, which will store combined 4 input elements in 1 output element
 void MD5::decode(uint32_t output[], const uint8_t input[], uint32_t len)
 {
-	//std::cout << "Funkcja decode" << std::endl;
-	//liczniki powinny miec zakres conajmniej typu zmiennej len
+
 	uint32_t i = 0;
 	for (uint32_t j = 0; j < len;j += 4)
 	{
@@ -104,12 +103,11 @@ void MD5::decode(uint32_t output[], const uint8_t input[], uint32_t len)
 }
 
 
-// kodowanie bloku wejsciowego z 32bit na 8bit; Na jednym elemecie input zapisane zostana 4 elementy output
+//encoding input of 32bit word to 8 bit words
 void MD5::encode(uint8_t output[], const uint32_t input[], uint32_t len)
 {
 	uint32_t i=0;
-	//std::cout << "Funkcja encode" << std::endl;
-	//liczniki powinny miec zakres conajmniej typu zmiennej len
+
 	for (uint32_t j = 0; j < len;j += 4)
 	{
 		output[j] = input[i] & 0xff;
@@ -121,13 +119,14 @@ void MD5::encode(uint8_t output[], const uint32_t input[], uint32_t len)
 }
 
 
-// funkcja wykonujaca algorytm MD5 na pojedynczym bloku danych
+// performs MD5 digest on single chunk of data (array of 64 8 bit words)
 void MD5::transform(const uint8_t block[64])
 {
-	//std::cout << "Funkcja transfrom" << std::endl;
+	
 	uint32_t a, b, c, d;
 	uint32_t x[16];
-	//przypsanie zmiennym aktualnych wartosci stanu
+	
+	//assigning current status to temporary values used in method
 	a = status_arr[0];
 	b = status_arr[1];
 	c = status_arr[2];
@@ -139,7 +138,7 @@ void MD5::transform(const uint8_t block[64])
 	//Wykonanie 64 iteracji - 4 Cykle po 16
 	/*
 		Ostatni argument funkcji FF,GG,HH i II jest
-		wartoœci¹ obliczana jako
+		wartoÅ“ciÂ¹ obliczana jako
 		floor(232 * abs(sin(i + 1)))
 		Ominiete zostalo wykonanie w petli for(i=0,i<64,i++)
 		w celu przyspieszenia wykonania glownej czessci algorytmu
@@ -218,24 +217,24 @@ void MD5::transform(const uint8_t block[64])
 	II(c, d, a, b, x[2], S43, 0x2ad7d2bb); /* 63 */
 	II(b, c, d, a, x[9], S44, 0xeb86d391); /* 64 */
 
-	//dodawanie transformacji do obecnego stanu
+	//update status values by adding a,b,c,d
 	status_arr[0] += a;
 	status_arr[1] += b;
 	status_arr[2] += c;
 	status_arr[3] += d;
 
-	// Zerowanie  informacji - forma zabezpieczenia algorytmu
+	//Clearing out data 
 	memset(x, 0, sizeof(x));
 }
 
 
-// dzielenie wiadomosci na bloki, dodanie paddingu, wykonanie algorytmu i aktualizacja wyniku
+// break message into blocks, adds padding and updates result
 void MD5::update(const uint8_t *input, uint32_t length)
 {
-	//std::cout << "Funkcja update"<< std::endl;
-
+	
 	uint32_t index = counter[0] / 8 % 64;
-	//std::cout << "index=" << index << std::endl;
+	
+	
 	//aktualizacja liczby bitow,
 	if ((counter[0] += (length << 3)) < (length << 3))
 		counter[1]++;
@@ -246,13 +245,13 @@ void MD5::update(const uint8_t *input, uint32_t length)
 	uint32_t firstpart = 64 - index;
 
 	uint32_t i;
-	//std::cout << "firstpart=" << firstpart << std::endl;
+	
 	//wykonywanie tranfsformacji
 	if (length >= firstpart)
 	{
 		//kopiowanie bloku wejsciowego do bufora
 		 memcpy(&buffer[index], input, firstpart);
-		 //std::copy(input, input + firstpart, &buffer[index]); //C4996 Error  code - teoretycznie mozna uzyc, ale funkcja nie umie zweryfikowac poprawnosci danych
+		 //std::copy(input, input + firstpart, &buffer[index]); //C4996 Error  code - should not be used
 
 		transform(buffer);
 
@@ -265,7 +264,7 @@ void MD5::update(const uint8_t *input, uint32_t length)
 	else
 		i = 0;
 
-	//std::cout << "i=" << i <<"\tlength="<<length<<"\tindex"<<index<< std::endl;
+	
 	// buforwanie reszty bloku wiadomosci (dla niepelnego) dla dalszej obrobki
 	memcpy(&buffer[index], &input[i], length - i);
 
@@ -273,7 +272,7 @@ void MD5::update(const uint8_t *input, uint32_t length)
 
 
 
-//konczenie algorytmu, sprzatanie(zerowanie) tablic i przepisanie wyniku do tablicy wyjsciowej msg_digest
+//finaliziation of algorithm, results will be rewritten to array
 MD5& MD5::finalize()
 {
 	//padding - rozmiar 64x8 bit =512 bit <- max rozmiar jaki moze przyjac
@@ -362,9 +361,7 @@ std::string md5_hash(const std::string str)
 int main(int argc, char *argv[])
 {
 	int x;
-	std::string Temp;// = md5("The quick brown fox jumps over the lazy dog");
-	//std::string Temp2 = "JtxamZ7DQHBKqFBEHYuOj5tpceMVf6TsJrGsp7MRlc8R6HJCj8zvEx6DJ2veTxLNhriWX0DL5WkQuZx54ozeQCngyB05yiMUFu13aPVhYxcZEnwW5YX2uyAgch8poDXX5qxSc3ycLqbOzmIYZfysJ6a2Y3EYK8oraiD63Xq2guCuIpJY3zKRt0yG2CJf7ArLNe2HQNKjZLCuMDAvlEi6HMuDQhb6S4ZmYWl18a2jWrRnkgh1qn1fg0rkDH9cK9DNnPRO2ggQ5Npfac9h4LCwcrhYgnvvJtDB6eTPZmIW0DZ5iucT2wao4ciQ6Fuea5OG1ayLuCfC4Zsa3YJo2rCPJvpZbFpBZMlHrvcz8KI1aunVyhUov1w7xPgLFGVCisjnKO8umbIjAnbjTarKBG3FPHe8r9OizH3yShqUpOrjBTo00t6wGB934F4G1xrUso13rasiRuXoWxknVty3iSDVWZ";
-	//"Yolo!Thelongeststringicouldcomeupwithisreallynotgoingtoworkherebecauseitwillbetoobigformetocomprehendotherwise_illjusttrytomakeitupsomehowKEKKEKEKEKEKEEKEKEKEEK_@32412fasfas";
+	std::string Temp;
 	std::string Temp2 = "abc123ef";
 	//for (int i = 0; i < 15; i++)
 	//	Temp2.append(Temp2);
@@ -389,28 +386,7 @@ int main(int argc, char *argv[])
 		
 	}
 
-	/*char text[33] = "sgogzlpgakh7y0mm7ny03tn26meree8w";
-
-	for (int i = 32; i < 127; i++)
-	{
-		std::cout << i<< std::endl;
-		for (int j = 0; j < 33; j++)
-		{
-			text[j] = i;
-			plik << md5_hash(text) << "\n";
-			
-		}
-	}*/
-
-
-	//plik << Temp2;
-	//plik << "\n";
-	////std::cout << Temp.c_str() << std::endl;
-	//std::cout << md5_hash("The quick brown fox jumps over the lazy dog") << std::endl;
-	//plik << md5(Temp2);
-	//MD5 new_obj("The quick brown fox jumps over the lazy dog");
-	//std::cout << new_obj.hexdigest() << std::endl;
-	//std::cout << new_obj.decdigest();
-	std::cin >> x;
+	
+	
 	return 0;
 }
